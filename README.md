@@ -1,85 +1,203 @@
+# Decoding Proprietary File Formats
+
+**An extensible toolkit for binary format analysis, structural reconstruction, and data extraction.**
+
+Decoding Proprietary File Formats is an open-source research and engineering toolkit designed to investigate undocumented binary formats, identify embedded data structures, analyze compression, reconstruct hierarchical layouts, and recover accessible data without requiring the original authoring software.
+
+The project combines binary profiling, differential analysis, structural parsing, signature detection, indirection analysis, and archive extraction into a modular workbench for reverse engineering.
+
+The goal is not merely to identify file signatures. It is to build a repeatable process for moving from an unknown binary artifact toward a testable structural specification and, where sufficient evidence is available, a functional decoder.
+
+## Why This Project Exists
+
+Proprietary formats can make valuable data difficult to access, migrate, validate, or preserve. Documentation may be unavailable, original applications may be discontinued, and file structures may depend on undocumented offsets, nested records, compression schemes, or internal references.
+
+This project provides reusable tools for investigating these problems through observable evidence rather than assumptions about file contents.
+
+Potential applications include:
+
+- Digital preservation and legacy data recovery.
+- Reverse engineering of undocumented file formats.
+- Analysis of proprietary archives and container files.
+- Binary format migration and interoperability.
+- Inspection of embedded records, strings, and compressed payloads.
+- Building custom parsers and extraction utilities.
+- Creating reproducible datasets for binary analysis and decoder testing.
+
+## Architecture
+
+The repository is organized into cooperating analytical components.
+
+### 1. Binary Profiling and Classification
+
+Tools for examining the statistical and structural properties of binary data.
+
+- `binary_profiler.py` — binary profiling.
+- `primitive_profiler.py` — analysis of primitive data representations.
+- `endian_align_analyzer.py` — investigation of byte order and alignment.
+- `entropy_profiler.py` — entropy analysis of binary regions.
+- `entropy_classifier.py` — heuristic classification of binary payloads.
+- `signature_classifier.py` — signature analysis and invariant detection.
+- `string_analyzer.py` — string extraction and inspection.
+- `hilbert_visualizer.py` — visual exploration of binary data patterns.
+
+### 2. Differential Analysis and Format Discovery
+
+Tools for comparing samples and investigating how binary structures change.
+
+- `binary_diff_tracker.py` — differential analysis and mutation-based investigation.
+- `corpus_orchestrator.py` — corpus cataloging and verification.
+- `workbench_triage.py` — initial binary analysis and triage.
+
+A particularly useful workflow is to generate multiple valid files while changing one input parameter at a time. Comparing the resulting binaries can help identify candidate fields, length values, flags, offsets, checksums, and record boundaries.
+
+### 3. Structural Parsing and Data Representation
+
+Components for reconstructing internal binary layouts.
+
+- `chunk_tree_parser.py` — hierarchical TLV and FourCC chunk analysis.
+- `linear_stream_parser.py` — linear binary stream parsing and CRC validation.
+- `vlq_bitfield_engine.py` — variable-length quantity decoding and bitfield extraction.
+- `indirection_engine.py` — pointer analysis, string references, and relocation-related processing.
+
+These tools target different structural patterns. Their applicability depends on the format's actual encoding, metadata, and layout conventions.
+
+### 4. Compression Analysis
+
+- `compression_signature_scanner.py` — detection and validation of supported compression signatures.
+- `entropy_profiler.py` — statistical analysis of byte distributions.
+- `entropy_classifier.py` — heuristic classification of candidate payloads.
+
+Compression analysis should combine signature checks, structural validation, and actual decompression attempts whenever possible. Statistical properties alone cannot reliably distinguish compressed data from encrypted data.
+
+### 5. Archive Analysis and Extraction
+
+- `archive_vfs_parser.py` — parsing and extraction of supported hierarchical archive structures through a virtual filesystem abstraction.
+
+The intended workflow is to identify archive entries, reconstruct their relationships, validate their boundaries, and expose recoverable contents through a consistent representation.
+
+Support for a particular proprietary archive requires a compatible parser or a sufficiently established format specification. The existence of an extraction engine does not imply universal compatibility with arbitrary archives.
+
+### 6. Runtime Observation and Specification Auditing
+
+- `file_tracer.c` — file-operation tracing using dynamic linker interposition on compatible systems.
+- `trace_analyzer.py` — analysis of execution traces.
+- `cleanroom_linter.py` — specification auditing against implemented rules.
+
+Runtime tracing can provide evidence about how an application accesses files. Platform compatibility, tracing scope, and the completeness of collected events must be evaluated separately.
+
+Clean-room specification auditing can help enforce development rules, but it does not independently establish legal compliance.
+
+## Typical Investigation Workflow
+
+A general investigation can follow these stages:
+
+1. **Preserve the original artifact.** Record its size, hash, provenance, and relevant metadata.
+2. **Profile the binary.** Inspect signatures, strings, entropy, byte distributions, and candidate primitive representations.
+3. **Compare controlled samples.** Identify byte ranges that change when a single known input changes.
+4. **Form structural hypotheses.** Investigate possible headers, length fields, offsets, chunk identifiers, bitfields, and checksums.
+5. **Test compression hypotheses.** Validate candidate signatures and attempt bounded decompression using compatible implementations.
+6. **Reconstruct the hierarchy.** Parse candidate records, chunks, references, and archive entries.
+7. **Extract recoverable content.** Decode supported structures and export the resulting data.
+8. **Verify the results.** Check boundaries, lengths, checksums, extracted file hashes, and round-trip behavior where a suitable encoder exists.
+9. **Document the format.** Record observed facts, hypotheses, confidence levels, and test cases.
+
+Not every format will support every stage. Unknown structures should remain explicitly unresolved until sufficient evidence is available.
+
+## Evidence-Driven Reverse Engineering
+
+The toolkit is intended to support evidence-based investigation rather than unconditional classification.
+
+For example:
+
+- High entropy is consistent with compression, encryption, and other high-variability data.
+- A recognized signature is evidence of a possible format, not proof that the entire stream is valid.
+- A plausible offset must still be checked against file boundaries and the expected structural context.
+- A candidate field identified through differential analysis should be tested against additional samples.
+- Successful parsing of one file does not establish compatibility with every version of a format.
+
+Where possible, analysis results should distinguish direct observations from inferred structures and unverified hypotheses.
+
+## Reliability and Safety
+
+Binary parsers process untrusted input and must treat malformed data as an expected condition.
+
+Production-oriented implementations should account for:
+
+- Out-of-bounds offsets and lengths.
+- Integer overflow and invalid size calculations.
+- Truncated or malformed records.
+- Recursive structures and excessive nesting.
+- Resource exhaustion caused by decompression.
+- Overlapping regions and inconsistent references.
+- Path traversal and unsafe archive extraction.
+- Corrupted checksums and incomplete streams.
+
+Use resource limits, explicit validation, isolated test environments, and non-destructive handling of original files.
+
+The term *production-grade* should be reserved for components whose behavior has been validated through appropriate testing and review.
+
+## Repository Structure
+
+```text
+Decoding-Proprietary-File-Formats/
+├── README.md
+├── LICENSE
+├── archive_vfs_parser.py
+├── binary_diff_tracker.py
+├── binary_profiler.py
+├── chunk_tree_parser.py
+├── cleanroom_linter.py
+├── compression_signature_scanner.py
+├── corpus_orchestrator.py
+├── endian_align_analyzer.py
+├── entropy_classifier.py
+├── entropy_profiler.py
+├── file_tracer.c
+├── hilbert_visualizer.py
+├── indirection_engine.py
+├── linear_stream_parser.py
+├── primitive_profiler.py
+├── signature_classifier.py
+├── string_analyzer.py
+├── trace_analyzer.py
+├── vlq_bitfield_engine.py
+└── workbench_triage.py
 ```
-The Philosophy of Black-Box Format Analysis
-When an unknown binary file is first loaded into a hex viewer, it presents itself as an intimidating, monolithic wall of hexadecimal digits. To the uninitiated, this sequence of bytes appears arbitrary—a digital cipher without an apparent key. Yet every proprietary file format, no matter how convoluted or undocumented, is the deterministic output of a logical system. Software does not write arbitrary chaos to disk. Every single bit resting in storage was positioned there by an engineer solving a concrete problem under specific computational constraints.
 
-Black-box format analysis is the disciplined practice of reconstructing that underlying engineering logic without relying on direct access to source code or exhaustive software disassembly. It is an epistemological discipline: a systematic framework for translating observed byte sequences into structured, verifiable mental models of data. Approached correctly, black-box reverse engineering is not guesswork; it is the scientific method applied to binary state spaces.
+## Current Scope
 
-Data as Frozen Computation
+The repository contains modular tools for binary profiling, differential analysis, compression signature scanning, structural parsing, archive analysis, and related investigation tasks.
 
-To decode an unknown format, one must first recognize what a file actually is: serialized state. During execution, an application constructs intricate, interconnected web structures in memory—objects, pointers, relational trees, graphics buffers, and dynamic arrays. Disk storage, however, is strictly linear. To persist these multi-dimensional structures across executions or transmit them over an I/O bus, the software must collapse its internal memory graphs into a one-dimensional stream of bytes.
+The precise supported formats, command-line interfaces, dependencies, platform requirements, and validation coverage depend on each implementation. Consult the individual source files and their tests before relying on a component in an automated recovery workflow.
 
-A file format is simply the serialization grammar chosen to perform this transformation. When analyzing an unknown format, you are not merely identifying numbers; you are reverse-mapping a serialized stream back into the in-memory data structures that spawned it.
+A unified orchestration layer, shared result schema, regression corpus, and end-to-end integration tests are natural directions for further development.
 
-Consider how an engineer designs a format. They balance three competing pressures:
+## Contributing
 
+Contributions that improve correctness, reproducibility, interoperability, and test coverage are especially valuable.
 
-Performance and I/O Throughput: Direct memory dumps, memory-mapped offsets, and native word alignment prioritize read/write speed over space efficiency.
+Useful contributions include:
 
-Storage Density: Compression algorithms, variable-length encodings, bit-packing, and dictionary deduplication reduce byte counts at the expense of CPU cycles.
+- Real-world binary samples with appropriate redistribution rights.
+- Minimal test fixtures and expected parsing results.
+- Regression tests for malformed and adversarial inputs.
+- Additional format specifications and verified decoders.
+- Improved bounds checking and resource limits.
+- Structured analysis reports with explicit confidence and evidence.
+- Cross-platform compatibility improvements.
+- End-to-end tests covering parsing, extraction, and integrity verification.
 
-Extensibility and Portability: Tag-Length-Value (TLV) wrappers, chunk headers, and explicit endianness indicators protect the format against cross-platform hazards and schema changes over time.
+Every proposed decoder should document its assumptions, supported variants, failure behavior, and known limitations.
 
-By examining where a format lands across these three axes, you can immediately deduce the era, environment, and architectural constraints under which the original developers operated. A legacy format written for 16-bit real-mode DOS will reflect heavy memory optimization and native 16-bit integer structures; an enterprise format written for modern multithreaded cloud storage will often prioritize chunked streaming, boundary alignment, and embedded checksums.
+## Project Philosophy
 
-The Axiom of Developer Parsimony
+**Observe first. Infer second. Validate before decoding.**
 
-The foundational premise of black-box analysis is the Axiom of Developer Parsimony: software engineers rarely build bespoke solutions when established patterns exist.
+Undocumented binary formats should be approached as engineering problems grounded in reproducible evidence. Statistical analysis generates leads; structural hypotheses organize them; parsers test them; and validation determines whether the recovered interpretation holds.
 
-Unless a proprietary format was explicitly designed to frustrate reverse engineering through deliberate obfuscation, the original authors wrote it using standard programming idioms, compiler defaults, and third-party utility libraries. They utilized their language's native primitives—integers, IEEE 754 floating-point values, and null-terminated or length-prefixed strings. They relied on common data packing strategies, standard compression libraries (such as zlib, LZ4, or zstandard), and typical structural patterns like offset tables and linked indices.
+The long-term objective is a reusable workbench for understanding, documenting, and recovering data from binary formats without unnecessary dependence on proprietary software.
 
-This predictability works entirely in your favor. When encountering an apparent block of high-entropy data, the most probable explanation is not a novel, bespoke mathematical transform invented by the developer; it is an off-the-shelf compression routine with a stripped header, a common hashing algorithm, or a primitive XOR mask applied to avoid raw-string leaks. Always hypothesize the simplest, most conventional software engineering decision before entertaining complex explanations.
+## License
 
-The Structural Invariants of Binary Data
-
-Regardless of complexity, almost all serialized data architectures fall into one of three structural archetypes, or a hybrid combination thereof:
-
-
-Sequential Architectures: Records follow one another directly in linear succession. These structures are rigid and lack explicit metadata outside of a primary file header. The parser expects data fields at static offsets, meaning that if a single variable-length element drifts without an explicit length descriptor, downstream parsing fails completely.
-
-Chunk-Based (TLV) Architectures: Data is isolated into distinct, self-describing containers. By implementing the Tag-Length-Value idiom—found in formats ranging from PNG images to network protocols—the parser can safely traverse unknown records by inspecting the length descriptor and seeking forward past unrecognized tags without parsing their contents.
-
-Indexed Architectures: The structural mapping of the file is decoupled from raw payload data. The primary file header points to an internal relocation or directory table—frequently stored at the extreme end of the file—containing offsets, payload sizes, and asset identifiers.
-
-Identifying which structural archetype governs your target format dictates your analytical strategy. An indexed file demands that you locate the master directory before attempting to dissect raw payloads; a chunked file requires you to map the framing boundaries before decoding payload semantics.
-
-The Black-Box Advantage Over Disassembly
-
-Security professionals and reverse engineers frequently default to disassembling the executable responsible for generating or consuming the file. While static and dynamic binary analysis of the executable engine are indispensable tools within the larger reverse engineering arsenal, leading an investigation with full executable disassembly presents significant operational hazards.
-
-First, compiled executables are often obscured by modern compiler optimizations, dead code paths, abstraction layers, virtual machine runtimes, and aggressive commercial code protection mechanisms. Sifting through thousands of lines of decompiled control flow to find the precise routines responsible for deserializing a minor sub-structure introduces immense cognitive overhead. You risk drowning in the implementation details of the parser rather than understanding the schema of the data.
-
-Second, binary executables often contain defensive validation checks that obscure the core format requirements. An executable's parsing logic reflects every validation branch, error handler, fallback mechanism, and legacy compatibility patch accumulated over decades of software maintenance.
-
-Black-box analysis isolates the signal from the noise. By evaluating the artifact directly, you focus exclusively on what is materially present in the data. You observe the canonical state of valid, functioning files without getting trapped in the labyrinth of the software's execution graph. Furthermore, clean-room black-box analysis preserves a clear boundary between observation and source duplication, an essential factor when developing drop-in, legally pristine third-party interoperability tools.
-
-The Scientific Method in Hexadecimal
-
-Black-box format analysis succeeds only when driven by disciplined, iterative hypothesis testing. Approaching a file through passive observation alone will quickly lead to cognitive exhaustion. The human visual system is notoriously prone to apophenia—the tendency to perceive meaningful patterns in completely random distributions. An analyst gazing at raw hex codes can easily misinterpret random hash output as dynamic offsets, or misidentify zero-padded alignment zones as deliberate field separators.
-
-To break out of subjective speculation, you must formalize an experimental feedback loop:
-
-
-Passive Topological Survey: Perform initial structural triage. Map macroscopic characteristics across a broad corpus of files using byte-frequency distributions and entropy profiling. This categorizes regions of the file into structural metadata (low entropy, predictable recurring byte values), raw media or numeric payloads (medium entropy), and compressed or encrypted containers (near-maximal entropy).
-
-Hypothesis Formulation: Construct narrow, falsifiable assertions regarding specific byte sequences. For example: "Bytes 0x08 through 0x0B represent a 32-bit little-endian integer defining the uncompressed length of the payload that begins at offset 0x20."
-
-Controlled Corpus Mutation (Differential Analysis): Test your hypothesis through deliberate perturbation. If you have access to the target application, construct two minimal project files that differ by exactly one single variable—such as changing an object's display name from a 4-character string to an 8-character string, or toggling a single boolean configuration parameter. Compare the resulting files byte-for-byte.
-
-Falsification and Verification: If modifying the application variable altered only the targeted bytes and incremented an upstream value by precisely 4 bytes, your hypothesis holds. If the entire downstream section shifted unpredictably, or if an obscure block at the end of the file completely mutated, you have likely uncovered an embedded checksum, an encryption wrapper, or an indirect pointer table.
-
-Schema Codification: As each hypothesis is confirmed, immediately capture it within an executable parser or formal declarative schema. Document the invariant rules and let the parsing tool validate the hypothesis against every remaining sample in your corpus.
-
-Managing Analytical Pitfalls
-
-The most lethal trap in black-box reverse engineering is overfitting to a limited sample size. A hypothesis that appears universally true across three sample files will routinely shatter when tested against a fourth.
-
-Developers frequently optimize edge cases. For instance, an integer field might be packed into a single byte when values remain below 128, but pivot to a dynamic multi-byte encoding (such as a Variable-Length Quantity or LEB128) as soon as the magnitude increases. A file created on a system with 4 GB of RAM might use 32-bit offsets, while the same application running in a high-memory enterprise environment might dynamically upgrade its internal pointer table to 64-bit absolute addresses.
-
-To maintain analytical rigor, your corpus must deliberately span edge cases: completely empty files, files containing massive payloads, files with non-ASCII or multi-byte Unicode strings, and files generated across different major versions of the target software.
-
-Quantitative Baseline: Building an Entropy Profiler
-
-The foundational step of any black-box analysis is separating structured metadata from packed, encrypted, or raw payload streams. Rather than relying on subjective manual observation in a hex editor, you must compute the Shannon entropy across uniform windows of the file. Shannon entropy quantifies the information density (or uncertainty) of a byte sequence, yielding a value between $0.0$ (complete uniformity, such as long stretches of null bytes) and $8.0$ (pure randomness, indicative of strong encryption or efficient compression).
-
-The following production-ready Python tool scans an arbitrary binary file using a sliding window, computing the local Shannon entropy and classifying the regions into concrete architectural categories.
-```
+See [LICENSE](LICENSE) for the applicable license terms.
